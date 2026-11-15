@@ -1,0 +1,152 @@
+name: CI - Sistema de Supermercado
+
+# Anatomia do Workflow (GitHub Docs):
+# 1. Events (on): gatilhos que iniciam a execução automática ou manual.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      executar_demo_cli:
+        description: 'Executar simulação da CLI após o build'
+        required: false
+        type: boolean
+        default: true
+
+# Evita desperdício de runners cancelando execuções antigas da mesma branch/PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Permissões mínimas necessárias (necessário para dorny/test-reporter publicar Checks).
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+jobs:
+  # 2. Job 1: Verificação rápida de qualidade (Linter + Tipagem) antes da matriz.
+  qualidade:
+    name: Qualidade (ESLint & TypeScript)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js com cache npm
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Executar ESLint
+        run: npm run lint
+
+      - name: Verificar tipos TypeScript
+        run: npm run typecheck
+
+  # 3. Job 2: Matrix Build rodando testes unitários e de integração em paralelo.
+  testes:
+    name: Testes (Node ${{ matrix.node-version }})
+    needs: qualidade
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['20', '22']
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js ${{ matrix.node-version }} com cache npm
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Executar testes com cobertura e relatório JUnit
+        run: npm run test:ci
+
+      - name: Publicar relatório de testes na aba Checks
+        uses: dorny/test-reporter@v3
+        if: ${{ !cancelled() }}
+        with:
+          name: Vitest Report (Node ${{ matrix.node-version }})
+          path: reports/junit.xml
+          reporter: jest-junit
+          fail-on-error: true
+
+      - name: Enviar artefato de cobertura
+        uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage-node-${{ matrix.node-version }}
+          path: coverage/
+          retention-days: 7
+
+      - name: Gerar resumo de cobertura no Job Summary
+        if: ${{ !cancelled() }}
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const file = "coverage/coverage-summary.json";
+            const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+            if (!summaryPath || !fs.existsSync(file)) process.exit(0);
+            const { total } = JSON.parse(fs.readFileSync(file, "utf8"));
+            const lines = [
+              "### Cobertura de Testes (Node ${{ matrix.node-version }})",
+              "",
+              "| Métrica | Cobertos | Total | Percentual |",
+              "| --- | ---: | ---: | ---: |",
+              `| Statements | ${total.statements.covered} | ${total.statements.total} | **${total.statements.pct}%** |`,
+              `| Branches | ${total.branches.covered} | ${total.branches.total} | **${total.branches.pct}%** |`,
+              `| Functions | ${total.functions.covered} | ${total.functions.total} | **${total.functions.pct}%** |`,
+              `| Lines | ${total.lines.covered} | ${total.lines.total} | **${total.lines.pct}%** |`,
+              ""
+            ];
+            fs.appendFileSync(summaryPath, lines.join("\n"));
+          '
+
+  # 4. Job 3: Build de produção e execução de smoke test da CLI após os testes passarem.
+  build:
+    name: Build & Demo CLI
+    needs: testes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js com cache npm
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Compilar TypeScript (dist/)
+        run: npm run build
+
+      - name: Executar demonstração CLI compilada
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.executar_demo_cli }}
+        run: node dist/cli.js
+
+      - name: Enviar artefato de build (dist/)
+        uses: actions/upload-artifact@v7
+        with:
+          name: supermercado-dist
+          path: dist/
+          retention-days: 7
