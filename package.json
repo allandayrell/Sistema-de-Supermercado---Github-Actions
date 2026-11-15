@@ -1,0 +1,40 @@
+{
+  "name": "sistema-supermercado",
+  "version": "1.0.0",
+  "description": "Sistema de supermercado em Node.js e TypeScript para demonstracao de CI/CD com GitHub Actions",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ci": "vitest run --coverage --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml",
+    "demo": "tsx src/cli.ts",
+    "start": "npm run build && node dist/cli.js"
+  },
+  "keywords": [
+    "github-actions",
+    "ci-cd",
+    "supermarket",
+    "typescript",
+    "vitest"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.22.0",
+    "@types/node": "^22.13.10",
+    "@vitest/coverage-v8": "^3.0.8",
+    "eslint": "^9.22.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.26.1",
+    "vitest": "^3.0.8"
+  }
+}
