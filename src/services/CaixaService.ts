@@ -6,7 +6,7 @@ import {
 } from '../models/types.js';
 
 const CUPONS_VALIDOS: Readonly<Record<string, number>> = {
-  DESC10: 0.2,
+  DESC10: 0.1,
 };
 
 const LIMITE_DESCONTO_EXTRA = 200;
