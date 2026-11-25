@@ -183,4 +183,27 @@ export class EstoqueService {
     produto.quantidade += quantidade;
     return this.repository.atualizar(produto);
   }
+
+  atualizarPreco(identificador: string, novoPreco: number): Produto {
+    if (!Number.isFinite(novoPreco) || novoPreco < 0) {
+      throw new ValidacaoError('Preço do produto não pode ser negativo');
+    }
+
+    const produto = this.buscarExistente(identificador);
+    if (!produto) {
+      throw new ProdutoNaoEncontradoError(identificador);
+    }
+
+    produto.preco = Number(novoPreco.toFixed(2));
+    return this.repository.atualizar(produto);
+  }
+
+  removerProduto(identificador: string): boolean {
+    const produto = this.buscarExistente(identificador);
+    if (!produto) {
+      throw new ProdutoNaoEncontradoError(identificador);
+    }
+
+    return this.repository.remover(produto.sku);
+  }
 }
