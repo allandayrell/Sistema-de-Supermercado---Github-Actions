@@ -1,11 +1,22 @@
 import {
   CupomInfo,
   CupomInvalidoError,
+  FORMAS_PAGAMENTO,
+  FormaPagamento,
   ItemCarrinho,
+  PagamentoInput,
+  PagamentoInsuficienteError,
   ProdutoNaoEncontradoError,
   ResumoCaixa,
   ValidacaoError,
 } from '../models/types.js';
+
+export interface PagamentoCalculado {
+  formaPagamento: FormaPagamento;
+  totalFinal: number;
+  valorPago: number;
+  troco: number;
+}
 
 const CUPONS_DISPONIVEIS: Readonly<Record<string, CupomInfo>> = {
   DESC10: {
@@ -187,6 +198,48 @@ export class CaixaService {
       descontoExtra,
       totalDesconto,
       totalFinal,
+    };
+  }
+
+  calcularPagamento(pagamento: PagamentoInput): PagamentoCalculado {
+    if (this.itens.size === 0) {
+      throw new ValidacaoError(
+        'Não é possível calcular pagamento com o carrinho vazio',
+      );
+    }
+
+    if (!FORMAS_PAGAMENTO.includes(pagamento.forma)) {
+      throw new ValidacaoError(`Forma de pagamento "${pagamento.forma}" inválida`);
+    }
+
+    const { totalFinal } = this.calcularResumo();
+
+    if (pagamento.forma !== 'DINHEIRO') {
+      return {
+        formaPagamento: pagamento.forma,
+        totalFinal,
+        valorPago: totalFinal,
+        troco: 0,
+      };
+    }
+
+    const recebido = pagamento.valorRecebido;
+    if (recebido === undefined || !Number.isFinite(recebido)) {
+      throw new ValidacaoError(
+        'Informe o valor recebido para pagamento em dinheiro',
+      );
+    }
+
+    const valorPago = arredondarMoeda(recebido);
+    if (valorPago < totalFinal) {
+      throw new PagamentoInsuficienteError(valorPago, totalFinal);
+    }
+
+    return {
+      formaPagamento: 'DINHEIRO',
+      totalFinal,
+      valorPago,
+      troco: arredondarMoeda(valorPago - totalFinal),
     };
   }
 
