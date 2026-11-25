@@ -4,12 +4,18 @@ export default defineConfig({
   test: {
     globals: false,
     environment: 'node',
-    include: ['tests/**/*.test.ts'],
+    include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html', 'lcov'],
       include: ['src/**/*.ts'],
-      exclude: ['src/cli.ts', 'src/index.ts'],
+      exclude: [
+        'src/cli.ts',
+        'src/index.ts',
+        'src/api/server.ts',
+        'src/repositories/IProdutoRepository.ts',
+        'src/repositories/IVendaRepository.ts',
+      ],
     },
   },
 });
