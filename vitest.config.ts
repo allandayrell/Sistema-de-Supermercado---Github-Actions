@@ -16,6 +16,12 @@ export default defineConfig({
         'src/repositories/IProdutoRepository.ts',
         'src/repositories/IVendaRepository.ts',
       ],
+      thresholds: {
+        lines: 80,
+        statements: 80,
+        functions: 80,
+        branches: 80,
+      },
     },
   },
 });
