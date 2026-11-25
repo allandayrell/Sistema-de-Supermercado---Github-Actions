@@ -669,3 +669,149 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Vendas e painel ---------- */
+
+.vendas-painel {
+  display: grid;
+  gap: 16px;
+}
+
+.painel-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 12px;
+}
+
+.painel-cabecalho h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.painel-cabecalho .texto-apoio {
+  margin: 2px 0 0;
+}
+
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.indicador {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.indicador-alerta {
+  border-color: #f2c879;
+  background: #fffbeb;
+}
+
+.indicador-rotulo {
+  color: var(--cor-texto-suave);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.indicador-valor {
+  overflow: hidden;
+  font-size: 1.55rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+}
+
+.indicador-detalhe {
+  color: var(--cor-texto-suave);
+  font-size: 0.78rem;
+}
+
+.historico .secao-cabecalho {
+  margin-bottom: 4px;
+}
+
+.lista-vendas {
+  display: grid;
+  gap: 10px;
+}
+
+.venda-card {
+  position: relative;
+  padding: 14px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  background: var(--cor-superficie);
+}
+
+.venda-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.venda-cabecalho > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.venda-itens {
+  margin: 10px 0;
+  color: var(--cor-texto-suave);
+  font-size: 0.88rem;
+}
+
+.venda-dados {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.venda-dados div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.venda-dados dt {
+  color: var(--cor-texto-suave);
+  font-size: 0.76rem;
+}
+
+.venda-dados dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.venda-estornar {
+  margin-top: 12px;
+}
+
+@media (max-width: 900px) {
+  .dashboard-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .venda-dados {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .painel-cabecalho {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboard-cards,
+  .venda-dados {
+    grid-template-columns: 1fr;
+  }
+}
