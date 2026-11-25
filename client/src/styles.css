@@ -470,3 +470,86 @@ select {
 .resumo-total dt {
   color: var(--cor-texto);
 }
+
+.pagamento {
+  margin: 14px 0 0;
+  padding: 12px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+}
+
+.pagamento legend {
+  padding: 0 4px;
+  font-weight: 600;
+}
+
+.pagamento-opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.opcao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.opcao-ativa {
+  border-color: var(--cor-marca);
+  background: var(--cor-marca-clara);
+  color: var(--cor-marca-escura);
+  font-weight: 600;
+}
+
+.dinheiro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.troco {
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.btn-finalizar {
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px;
+  font-size: 1rem;
+}
+
+/* ---------- Recibo ---------- */
+
+.recibo-cabecalho h2 {
+  margin: 8px 0 2px;
+}
+
+.recibo-cabecalho p {
+  margin: 0 0 12px;
+  word-break: break-all;
+}
+
+.recibo-itens {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.recibo-itens th,
+.recibo-itens td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--cor-borda);
+  text-align: left;
+}
+
+.recibo-itens th:not(:first-child),
+.recibo-itens td:not(:first-child) {
+  text-align: right;
+}

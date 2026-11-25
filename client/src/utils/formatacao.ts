@@ -1,3 +1,5 @@
+import type { FormaPagamento } from '../../../src/shared/contracts';
+
 const formatadorMoeda = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
@@ -24,3 +26,9 @@ export function formatarDataHora(isoString: string): string {
 export function idCurto(id: string): string {
   return id.slice(0, 8).toUpperCase();
 }
+
+export const ROTULOS_PAGAMENTO: Readonly<Record<FormaPagamento, string>> = {
+  DINHEIRO: 'Dinheiro',
+  PIX: 'PIX',
+  CARTAO: 'Cartão',
+};
