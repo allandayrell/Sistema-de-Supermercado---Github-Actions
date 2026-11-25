@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ci": "vitest run --coverage --reporter=default --reporter=junit --outputFile.junit=reports/junit.xml",
+    "test:e2e": "playwright test",
     "demo": "tsx src/cli.ts",
     "start": "node dist/server/api/server.js"
   },
@@ -33,6 +34,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
+    "@playwright/test": "^1.65.1",
     "@types/express": "^5.0.6",
     "@types/node": "^22.13.10",
     "@types/react": "^19.3.3",
