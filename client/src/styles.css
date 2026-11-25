@@ -402,3 +402,71 @@ select {
   text-align: center;
   font-weight: 700;
 }
+
+.cupom {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.cupom-form {
+  display: flex;
+  gap: 8px;
+}
+
+.cupom-form .input {
+  flex: 1;
+  min-width: 0;
+  text-transform: uppercase;
+}
+
+.cupom-aplicado {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--cor-marca-clara);
+  color: var(--cor-marca-escura);
+}
+
+.resumo {
+  margin: 14px 0 0;
+  transition: opacity 0.15s;
+}
+
+.resumo-atualizando {
+  opacity: 0.6;
+}
+
+.resumo > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.resumo dt {
+  color: var(--cor-texto-suave);
+}
+
+.resumo dd {
+  margin: 0;
+}
+
+.resumo .desconto {
+  color: var(--cor-marca);
+}
+
+.resumo-total {
+  margin-top: 6px;
+  padding-top: 8px !important;
+  border-top: 1px dashed var(--cor-borda);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.resumo-total dt {
+  color: var(--cor-texto);
+}

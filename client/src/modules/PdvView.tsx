@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Produto } from '../../../src/shared/contracts';
+import type { Produto, ResumoCaixa } from '../../../src/shared/contracts';
 import { Banner, Carregando, EstadoVazio } from '../components/Feedback';
-import { api, mensagemDeErro } from '../services/api';
+import { api, ApiError, mensagemDeErro } from '../services/api';
 import {
   adicionarAoCarrinho,
   alterarQuantidade,
@@ -16,6 +16,11 @@ export function PdvView() {
   const [erro, setErro] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
   const [carrinho, setCarrinho] = useState<ItemCarrinhoLocal[]>([]);
+  const [cupomDigitado, setCupomDigitado] = useState('');
+  const [cupom, setCupom] = useState<string | null>(null);
+  const [resumo, setResumo] = useState<ResumoCaixa | null>(null);
+  const [simulando, setSimulando] = useState(false);
+  const [erroCaixa, setErroCaixa] = useState<string | null>(null);
 
   const carregarProdutos = useCallback(async () => {
     try {
@@ -30,6 +35,56 @@ export function PdvView() {
   useEffect(() => {
     void carregarProdutos();
   }, [carregarProdutos]);
+
+  useEffect(() => {
+    if (carrinho.length === 0) {
+      setResumo(null);
+      return;
+    }
+
+    let cancelado = false;
+    setSimulando(true);
+    api
+      .simularCaixa({ itens: carrinho, ...(cupom ? { cupom } : {}) })
+      .then((novoResumo) => {
+        if (!cancelado) {
+          setResumo(novoResumo);
+        }
+      })
+      .catch((e: unknown) => {
+        if (cancelado) {
+          return;
+        }
+        if (e instanceof ApiError && e.codigo === 'CUPOM_INVALIDO') {
+          // Cupom deixou de ser válido: removemos e recalculamos sem ele.
+          setCupom(null);
+        }
+        setErroCaixa(mensagemDeErro(e));
+      })
+      .finally(() => {
+        if (!cancelado) {
+          setSimulando(false);
+        }
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [carrinho, cupom]);
+
+  function aplicarCupom() {
+    const codigo = cupomDigitado.trim().toUpperCase();
+    if (!codigo) {
+      return;
+    }
+    setErroCaixa(null);
+    setCupom(codigo);
+    setCupomDigitado('');
+  }
+
+  function removerCupom() {
+    setCupom(null);
+  }
 
   const produtosPorSku = useMemo(
     () => new Map(produtos.map((produto) => [produto.sku, produto])),
@@ -96,6 +151,12 @@ export function PdvView() {
       <section className="card pdv-carrinho" aria-labelledby="titulo-carrinho">
         <h2 id="titulo-carrinho">Carrinho</h2>
 
+        {erroCaixa && (
+          <Banner tipo="erro" onFechar={() => setErroCaixa(null)}>
+            {erroCaixa}
+          </Banner>
+        )}
+
         {carrinho.length === 0 ? (
           <EstadoVazio titulo="Carrinho vazio" descricao="Adicione produtos do catálogo para iniciar a venda." />
         ) : (
@@ -155,6 +216,69 @@ export function PdvView() {
               );
             })}
           </ul>
+        )}
+
+        <div className="cupom">
+          {cupom ? (
+            <div className="cupom-aplicado">
+              <span>
+                Cupom <strong data-testid="cupom-aplicado">{cupom}</strong> aplicado
+              </span>
+              <button type="button" className="btn btn-pequeno" onClick={removerCupom}>
+                Remover cupom
+              </button>
+            </div>
+          ) : (
+            <form
+              className="cupom-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                aplicarCupom();
+              }}
+            >
+              <input
+                className="input"
+                placeholder="Cupom (ex.: DESC10)"
+                aria-label="Código do cupom"
+                value={cupomDigitado}
+                onChange={(e) => setCupomDigitado(e.target.value)}
+              />
+              <button
+                type="submit"
+                className="btn"
+                disabled={carrinho.length === 0 || !cupomDigitado.trim()}
+              >
+                Aplicar
+              </button>
+            </form>
+          )}
+        </div>
+
+        {resumo && (
+          <dl className={simulando ? 'resumo resumo-atualizando' : 'resumo'} data-testid="resumo-caixa">
+            <div>
+              <dt>Subtotal</dt>
+              <dd className="numero">{formatarMoeda(resumo.subtotal)}</dd>
+            </div>
+            {resumo.descontoCupom > 0 && (
+              <div>
+                <dt>Desconto do cupom ({resumo.cupomAplicado})</dt>
+                <dd className="numero desconto">− {formatarMoeda(resumo.descontoCupom)}</dd>
+              </div>
+            )}
+            {resumo.descontoExtra > 0 && (
+              <div>
+                <dt>Bônus compras acima de R$ 200 (5%)</dt>
+                <dd className="numero desconto">− {formatarMoeda(resumo.descontoExtra)}</dd>
+              </div>
+            )}
+            <div className="resumo-total">
+              <dt>Total</dt>
+              <dd className="numero" data-testid="total-final">
+                {formatarMoeda(resumo.totalFinal)}
+              </dd>
+            </div>
+          </dl>
         )}
       </section>
     </div>
