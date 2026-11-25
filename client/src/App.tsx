@@ -1,47 +1,47 @@
 import { useEffect, useState } from 'react';
-
-interface HealthStatus {
-  status: string;
-  service: string;
-  produtosCadastrados: number;
-}
+import { Navegacao, type Modulo } from './components/Navegacao';
+import { api, type HealthStatus } from './services/api';
 
 export function App() {
   const [health, setHealth] = useState<HealthStatus | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
+  const [erroConexao, setErroConexao] = useState<string | null>(null);
+  const [modulo, setModulo] = useState<Modulo>('pdv');
 
   useEffect(() => {
-    fetch('/api/health')
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-        return res.json() as Promise<HealthStatus>;
-      })
-      .then((dados) => setHealth(dados))
-      .catch(() => setErro('Não foi possível conectar ao servidor Mercado Horizonte'));
+    api
+      .health()
+      .then(setHealth)
+      .catch(() => setErroConexao('Não foi possível conectar ao servidor Mercado Horizonte'));
   }, []);
 
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div>
-          <h1>Mercado Horizonte</h1>
-          <p className="subtitle">Plataforma de Varejo, Estoque e Frente de Caixa</p>
+        <div className="marca">
+          <span className="logo" aria-hidden="true">
+            MH
+          </span>
+          <div>
+            <h1>Mercado Horizonte</h1>
+            <p className="subtitle">Plataforma de Varejo, Estoque e Frente de Caixa</p>
+          </div>
         </div>
-        <span className="status-badge" data-testid="api-status">
-          {health ? `API Online (${health.produtosCadastrados} produtos)` : erro ?? 'Conectando...'}
+        <span
+          className={erroConexao ? 'status-badge status-offline' : 'status-badge'}
+          data-testid="api-status"
+        >
+          {health
+            ? `API Online (${health.produtosCadastrados} produtos)`
+            : (erroConexao ?? 'Conectando...')}
         </span>
       </header>
 
+      <Navegacao ativo={modulo} onSelecionar={setModulo} />
+
       <main className="content">
-        <section className="card">
-          <h2>Operação da Loja</h2>
-          <p>
-            Ambiente web preparado para os módulos de Frente de Caixa (PDV), Gestão de Estoque e
-            Histórico de Vendas.
-          </p>
-        </section>
+        {modulo === 'pdv' && <section className="card">PDV em construção</section>}
+        {modulo === 'estoque' && <section className="card">Estoque em construção</section>}
+        {modulo === 'vendas' && <section className="card">Vendas em construção</section>}
       </main>
     </div>
   );
