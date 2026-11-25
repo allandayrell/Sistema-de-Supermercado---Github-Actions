@@ -1,6 +1,8 @@
 import {
+  CATEGORIAS_PRODUTO,
   CategoriaProduto,
   EstoqueInsuficienteError,
+  FiltroProdutos,
   Produto,
   ProdutoNaoEncontradoError,
   ValidacaoError,
@@ -89,10 +91,15 @@ export class EstoqueService {
       throw new ValidacaoError(`SKU "${sku}" já está cadastrado`);
     }
 
+    const categoria = opcoes.categoria ?? 'Outros';
+    if (!CATEGORIAS_PRODUTO.includes(categoria)) {
+      throw new ValidacaoError(`Categoria "${categoria}" inválida`);
+    }
+
     const produto: Produto = {
       sku,
       nome: nomeLimpo,
-      categoria: opcoes.categoria ?? 'Outros',
+      categoria,
       preco: Number(preco.toFixed(2)),
       quantidade,
       estoqueMinimo,
@@ -110,8 +117,35 @@ export class EstoqueService {
     return produto;
   }
 
-  listarProdutos(): Produto[] {
-    return this.repository.listarTodos();
+  listarProdutos(filtro: FiltroProdutos = {}): Produto[] {
+    const busca = filtro.busca?.trim().toLowerCase();
+
+    return this.repository.listarTodos().filter((produto) => {
+      if (!filtro.incluirInativos && !produto.ativo) {
+        return false;
+      }
+      if (filtro.categoria && produto.categoria !== filtro.categoria) {
+        return false;
+      }
+      if (
+        busca &&
+        !produto.nome.toLowerCase().includes(busca) &&
+        !produto.sku.toLowerCase().includes(busca)
+      ) {
+        return false;
+      }
+      if (
+        filtro.apenasEstoqueBaixo &&
+        produto.quantidade > produto.estoqueMinimo
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  listarEstoqueBaixo(): Produto[] {
+    return this.listarProdutos({ apenasEstoqueBaixo: true });
   }
 
   verificarDisponibilidade(identificador: string, quantidade: number): void {
