@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navegacao, type Modulo } from './components/Navegacao';
+import { EstoqueView } from './modules/EstoqueView';
 import { PdvView } from './modules/PdvView';
 import { api, type HealthStatus } from './services/api';
 
@@ -41,7 +42,7 @@ export function App() {
 
       <main className="content">
         {modulo === 'pdv' && <PdvView />}
-        {modulo === 'estoque' && <section className="card">Estoque em construção</section>}
+        {modulo === 'estoque' && <EstoqueView />}
         {modulo === 'vendas' && <section className="card">Vendas em construção</section>}
       </main>
     </div>
