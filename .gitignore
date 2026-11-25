@@ -2,6 +2,12 @@ node_modules/
 dist/
 coverage/
 reports/
+playwright-report/
+test-results/
+data/
 *.log
 .DS_Store
 .env
+AGENT.md
+REQUISITOS_TP.md
+plans/
