@@ -1,12 +1,25 @@
 import {
+  CupomInfo,
   CupomInvalidoError,
   ItemCarrinho,
+  ProdutoNaoEncontradoError,
   ResumoCaixa,
   ValidacaoError,
 } from '../models/types.js';
 
-const CUPONS_VALIDOS: Readonly<Record<string, number>> = {
-  DESC10: 0.1,
+const CUPONS_DISPONIVEIS: Readonly<Record<string, CupomInfo>> = {
+  DESC10: {
+    codigo: 'DESC10',
+    tipo: 'PERCENTUAL',
+    valor: 0.1,
+    valorMinimo: 0,
+  },
+  HORIZONTE15: {
+    codigo: 'HORIZONTE15',
+    tipo: 'FIXO',
+    valor: 15,
+    valorMinimo: 100,
+  },
 };
 
 const LIMITE_DESCONTO_EXTRA = 200;
@@ -16,9 +29,6 @@ function arredondarMoeda(valor: number): number {
   return Math.round((valor + Number.EPSILON) * 100) / 100;
 }
 
-/**
- * Gerencia o carrinho de compras, cupons de desconto e cálculo do caixa.
- */
 export class CaixaService {
   private readonly itens = new Map<string, ItemCarrinho>();
   private cupomAtual: string | null = null;
@@ -27,13 +37,27 @@ export class CaixaService {
     return nome.trim().toLowerCase();
   }
 
-  /**
-   * Adiciona um item ao carrinho validando preço não negativo e quantidade positiva.
-   */
+  private buscarChaveItem(identificador: string): string | null {
+    const chaveDireta = this.normalizarChave(identificador);
+    if (this.itens.has(chaveDireta)) {
+      return chaveDireta;
+    }
+
+    const skuAlvo = identificador.trim().toUpperCase();
+    for (const [chave, item] of this.itens.entries()) {
+      if (item.sku && item.sku.toUpperCase() === skuAlvo) {
+        return chave;
+      }
+    }
+
+    return null;
+  }
+
   adicionarItem(
     nome: string,
     precoUnitario: number,
     quantidade: number,
+    sku?: string,
   ): ItemCarrinho {
     const nomeLimpo = nome.trim();
     if (!nomeLimpo) {
@@ -66,47 +90,67 @@ export class CaixaService {
       nome: nomeLimpo,
       precoUnitario: precoNormalizado,
       quantidade,
+      ...(sku ? { sku: sku.trim().toUpperCase() } : {}),
     };
 
     this.itens.set(chave, novoItem);
     return { ...novoItem };
   }
 
-  /**
-   * Remove um item do carrinho pelo nome.
-   */
-  removerItem(nome: string): boolean {
-    return this.itens.delete(this.normalizarChave(nome));
+  atualizarQuantidade(identificador: string, novaQuantidade: number): ItemCarrinho {
+    if (!Number.isInteger(novaQuantidade) || novaQuantidade <= 0) {
+      throw new ValidacaoError('Quantidade do item deve ser maior que zero');
+    }
+
+    const chave = this.buscarChaveItem(identificador);
+    if (!chave) {
+      throw new ProdutoNaoEncontradoError(identificador);
+    }
+
+    const item = this.itens.get(chave)!;
+    item.quantidade = novaQuantidade;
+    return { ...item };
   }
 
-  /**
-   * Retorna uma cópia da lista de itens atualmente no carrinho.
-   */
+  removerItem(identificador: string): boolean {
+    const chave = this.buscarChaveItem(identificador);
+    if (!chave) {
+      return false;
+    }
+    return this.itens.delete(chave);
+  }
+
   listarItens(): ItemCarrinho[] {
     return Array.from(this.itens.values(), (item) => ({ ...item }));
   }
 
-  /**
-   * Aplica um cupom promocional válido (ex: DESC10 para 10% de desconto).
-   */
+  listarCuponsDisponiveis(): CupomInfo[] {
+    return Object.values(CUPONS_DISPONIVEIS).map((cupom) => ({ ...cupom }));
+  }
+
   aplicarCupom(codigo: string): void {
     const codigoNormalizado = codigo.trim().toUpperCase();
-    if (!codigoNormalizado || !(codigoNormalizado in CUPONS_VALIDOS)) {
+    const cupom = codigoNormalizado ? CUPONS_DISPONIVEIS[codigoNormalizado] : undefined;
+
+    if (!cupom) {
       throw new CupomInvalidoError(codigo);
     }
+
+    const subtotal = this.calcularSubtotal();
+    if (subtotal < cupom.valorMinimo) {
+      throw new CupomInvalidoError(
+        codigoNormalizado,
+        `subtotal mínimo de R$ ${cupom.valorMinimo.toFixed(2)} não atingido`,
+      );
+    }
+
     this.cupomAtual = codigoNormalizado;
   }
 
-  /**
-   * Remove qualquer cupom aplicado no carrinho.
-   */
   removerCupom(): void {
     this.cupomAtual = null;
   }
 
-  /**
-   * Calcula o subtotal bruto dos itens do carrinho antes dos descontos.
-   */
   calcularSubtotal(): number {
     let soma = 0;
     for (const item of this.itens.values()) {
@@ -115,13 +159,19 @@ export class CaixaService {
     return arredondarMoeda(soma);
   }
 
-  /**
-   * Calcula o resumo completo com cupom e bônus de 5% acima de R$ 200.
-   */
   calcularResumo(): ResumoCaixa {
     const subtotal = this.calcularSubtotal();
-    const taxaCupom = this.cupomAtual ? CUPONS_VALIDOS[this.cupomAtual] : 0;
-    const descontoCupom = arredondarMoeda(subtotal * taxaCupom);
+    const cupom = this.cupomAtual ? CUPONS_DISPONIVEIS[this.cupomAtual] : undefined;
+    const cupomElegivel = cupom !== undefined && subtotal >= cupom.valorMinimo;
+
+    let descontoCupom = 0;
+    if (cupomElegivel) {
+      descontoCupom =
+        cupom.tipo === 'PERCENTUAL'
+          ? arredondarMoeda(subtotal * cupom.valor)
+          : arredondarMoeda(Math.min(subtotal, cupom.valor));
+    }
+
     const descontoExtra =
       subtotal > LIMITE_DESCONTO_EXTRA
         ? arredondarMoeda(subtotal * TAXA_DESCONTO_EXTRA)
@@ -132,7 +182,7 @@ export class CaixaService {
     return {
       itens: this.listarItens(),
       subtotal,
-      cupomAplicado: this.cupomAtual,
+      cupomAplicado: cupomElegivel ? this.cupomAtual : null,
       descontoCupom,
       descontoExtra,
       totalDesconto,
@@ -140,9 +190,6 @@ export class CaixaService {
     };
   }
 
-  /**
-   * Esvazia o carrinho e remove o cupom aplicado.
-   */
   limparCarrinho(): void {
     this.itens.clear();
     this.cupomAtual = null;
