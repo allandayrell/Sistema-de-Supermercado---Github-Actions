@@ -1,19 +1,23 @@
 import {
+  CategoriaProduto,
   EstoqueInsuficienteError,
   Produto,
   ProdutoNaoEncontradoError,
   ValidacaoError,
 } from '../models/types.js';
+import { IProdutoRepository } from '../repositories/IProdutoRepository.js';
+import { InMemoryProdutoRepository } from '../repositories/InMemoryProdutoRepository.js';
 
-/**
- * Gerencia o catálogo e o saldo de estoque dos produtos em memória.
- */
+export interface OpcoesCadastroProduto {
+  sku?: string;
+  categoria?: CategoriaProduto;
+  estoqueMinimo?: number;
+}
+
 export class EstoqueService {
-  private readonly produtos = new Map<string, Produto>();
-
-  private normalizarChave(nome: string): string {
-    return nome.trim().toLowerCase();
-  }
+  constructor(
+    private readonly repository: IProdutoRepository = new InMemoryProdutoRepository(),
+  ) {}
 
   private validarQuantidadePositiva(quantidade: number, contexto: string): void {
     if (!Number.isInteger(quantidade) || quantidade <= 0) {
@@ -23,10 +27,43 @@ export class EstoqueService {
     }
   }
 
-  /**
-   * Cadastra um novo produto no estoque após validar nome, preço e quantidade.
-   */
-  cadastrarProduto(nome: string, preco: number, quantidade: number): Produto {
+  private gerarSkuPadrao(nomeLimpo: string): string {
+    const slug = nomeLimpo
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    const base = `SKU-${slug || 'ITEM'}`;
+    if (!this.repository.buscarPorSku(base)) {
+      return base;
+    }
+
+    let sufixo = 2;
+    while (this.repository.buscarPorSku(`${base}-${sufixo}`)) {
+      sufixo += 1;
+    }
+    return `${base}-${sufixo}`;
+  }
+
+  private buscarExistente(identificador: string): Produto | null {
+    return (
+      this.repository.buscarPorSku(identificador) ??
+      this.repository.buscarPorNome(identificador)
+    );
+  }
+
+  existeProduto(identificador: string): boolean {
+    return this.buscarExistente(identificador) !== null;
+  }
+
+  cadastrarProduto(
+    nome: string,
+    preco: number,
+    quantidade: number,
+    opcoes: OpcoesCadastroProduto = {},
+  ): Produto {
     const nomeLimpo = nome.trim();
     if (!nomeLimpo) {
       throw new ValidacaoError('Nome do produto é obrigatório');
@@ -38,50 +75,51 @@ export class EstoqueService {
 
     this.validarQuantidadePositiva(quantidade, 'Cadastro de produto');
 
-    const chave = this.normalizarChave(nomeLimpo);
-    if (this.produtos.has(chave)) {
+    const estoqueMinimo = opcoes.estoqueMinimo ?? 5;
+    if (!Number.isInteger(estoqueMinimo) || estoqueMinimo < 0) {
+      throw new ValidacaoError('Estoque mínimo deve ser um inteiro maior ou igual a zero');
+    }
+
+    if (this.repository.buscarPorNome(nomeLimpo)) {
       throw new ValidacaoError(`Produto "${nomeLimpo}" já está cadastrado`);
     }
 
+    const sku = opcoes.sku?.trim().toUpperCase() || this.gerarSkuPadrao(nomeLimpo);
+    if (this.repository.buscarPorSku(sku)) {
+      throw new ValidacaoError(`SKU "${sku}" já está cadastrado`);
+    }
+
     const produto: Produto = {
+      sku,
       nome: nomeLimpo,
+      categoria: opcoes.categoria ?? 'Outros',
       preco: Number(preco.toFixed(2)),
       quantidade,
+      estoqueMinimo,
+      ativo: true,
     };
 
-    this.produtos.set(chave, produto);
-    return { ...produto };
+    return this.repository.salvar(produto);
   }
 
-  /**
-   * Retorna uma cópia dos dados do produto pelo nome.
-   */
-  consultarProduto(nome: string): Produto {
-    const chave = this.normalizarChave(nome);
-    const produto = this.produtos.get(chave);
+  consultarProduto(identificador: string): Produto {
+    const produto = this.buscarExistente(identificador);
     if (!produto) {
-      throw new ProdutoNaoEncontradoError(nome);
+      throw new ProdutoNaoEncontradoError(identificador);
     }
-    return { ...produto };
+    return produto;
   }
 
-  /**
-   * Lista todos os produtos cadastrados no estoque.
-   */
   listarProdutos(): Produto[] {
-    return Array.from(this.produtos.values(), (produto) => ({ ...produto }));
+    return this.repository.listarTodos();
   }
 
-  /**
-   * Verifica se há saldo suficiente em estoque para a quantidade solicitada.
-   */
-  verificarDisponibilidade(nome: string, quantidade: number): void {
+  verificarDisponibilidade(identificador: string, quantidade: number): void {
     this.validarQuantidadePositiva(quantidade, 'Consulta de estoque');
-    const chave = this.normalizarChave(nome);
-    const produto = this.produtos.get(chave);
+    const produto = this.buscarExistente(identificador);
 
     if (!produto) {
-      throw new ProdutoNaoEncontradoError(nome);
+      throw new ProdutoNaoEncontradoError(identificador);
     }
 
     if (quantidade > produto.quantidade) {
@@ -93,31 +131,22 @@ export class EstoqueService {
     }
   }
 
-  /**
-   * Deduz a quantidade vendida do saldo do produto, impedindo estoque negativo.
-   */
-  baixarEstoque(nome: string, quantidade: number): Produto {
-    this.verificarDisponibilidade(nome, quantidade);
-    const chave = this.normalizarChave(nome);
-    const produto = this.produtos.get(chave)!;
-
+  baixarEstoque(identificador: string, quantidade: number): Produto {
+    this.verificarDisponibilidade(identificador, quantidade);
+    const produto = this.buscarExistente(identificador)!;
     produto.quantidade -= quantidade;
-    return { ...produto };
+    return this.repository.atualizar(produto);
   }
 
-  /**
-   * Adiciona unidades ao estoque de um produto já cadastrado.
-   */
-  reporEstoque(nome: string, quantidade: number): Produto {
+  reporEstoque(identificador: string, quantidade: number): Produto {
     this.validarQuantidadePositiva(quantidade, 'Reposição de estoque');
-    const chave = this.normalizarChave(nome);
-    const produto = this.produtos.get(chave);
+    const produto = this.buscarExistente(identificador);
 
     if (!produto) {
-      throw new ProdutoNaoEncontradoError(nome);
+      throw new ProdutoNaoEncontradoError(identificador);
     }
 
     produto.quantidade += quantidade;
-    return { ...produto };
+    return this.repository.atualizar(produto);
   }
 }

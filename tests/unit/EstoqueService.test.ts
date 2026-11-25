@@ -12,12 +12,14 @@ describe('EstoqueService', () => {
 
     const criado = estoque.cadastrarProduto('Arroz', 24.9, 10);
 
-    expect(criado).toEqual({ nome: 'Arroz', preco: 24.9, quantidade: 10 });
-    expect(estoque.consultarProduto('arroz')).toEqual({
+    expect(criado).toMatchObject({ nome: 'Arroz', preco: 24.9, quantidade: 10, ativo: true });
+    expect(criado.sku).toBe('SKU-ARROZ');
+    expect(estoque.consultarProduto('arroz')).toMatchObject({
       nome: 'Arroz',
       preco: 24.9,
       quantidade: 10,
     });
+    expect(estoque.consultarProduto('SKU-ARROZ').nome).toBe('Arroz');
     expect(estoque.listarProdutos()).toHaveLength(1);
   });
 
