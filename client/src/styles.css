@@ -321,3 +321,84 @@ select {
     transform: rotate(360deg);
   }
 }
+
+/* ---------- PDV ---------- */
+
+.pdv {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.secao-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.secao-cabecalho h2 {
+  margin: 0;
+}
+
+.lista-produtos,
+.lista-carrinho {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.produto-item,
+.carrinho-item {
+  display: grid;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.produto-item {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.carrinho-item {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.produto-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.produto-info .selo {
+  align-self: flex-start;
+}
+
+.produto-meta {
+  color: var(--cor-texto-suave);
+  font-size: 0.85rem;
+}
+
+.produto-valores {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.quantidade-controle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quantidade-controle .numero {
+  min-width: 2ch;
+  text-align: center;
+  font-weight: 700;
+}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navegacao, type Modulo } from './components/Navegacao';
+import { PdvView } from './modules/PdvView';
 import { api, type HealthStatus } from './services/api';
 
 export function App() {
@@ -39,7 +40,7 @@ export function App() {
       <Navegacao ativo={modulo} onSelecionar={setModulo} />
 
       <main className="content">
-        {modulo === 'pdv' && <section className="card">PDV em construção</section>}
+        {modulo === 'pdv' && <PdvView />}
         {modulo === 'estoque' && <section className="card">Estoque em construção</section>}
         {modulo === 'vendas' && <section className="card">Vendas em construção</section>}
       </main>
