@@ -142,7 +142,7 @@ jobs:
 
       - name: Executar demonstração CLI compilada
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.executar_demo_cli }}
-        run: node dist/cli.js
+        run: node dist/server/cli.js
 
       - name: Enviar artefato de build (dist/)
         uses: actions/upload-artifact@v7

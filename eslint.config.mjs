@@ -3,7 +3,14 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'coverage/**', 'reports/**', 'node_modules/**'],
+    ignores: [
+      'dist/**',
+      'coverage/**',
+      'reports/**',
+      'playwright-report/**',
+      'test-results/**',
+      'node_modules/**',
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
@@ -19,6 +26,16 @@ export default tseslint.config(
         'error',
         { argsIgnorePattern: '^_' },
       ],
+    },
+  },
+  {
+    files: ['client/src/**/*.{ts,tsx}'],
+    languageOptions: {
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        fetch: 'readonly',
+      },
     },
   },
 );
