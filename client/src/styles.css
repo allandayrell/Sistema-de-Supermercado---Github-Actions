@@ -815,3 +815,86 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Responsividade geral ---------- */
+
+@media (max-width: 900px) {
+  .pdv {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .app-shell {
+    padding: 12px 10px 32px;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .marca {
+    align-items: flex-start;
+  }
+
+  .topbar h1 {
+    font-size: 1.35rem;
+  }
+
+  .subtitle {
+    font-size: 0.82rem;
+  }
+
+  .status-badge {
+    max-width: 100%;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .navegacao ul {
+    width: 100%;
+  }
+
+  .aba {
+    padding: 9px 12px;
+  }
+
+  .secao-cabecalho {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .secao-cabecalho .input {
+    width: 100%;
+  }
+
+  .produto-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .produto-item .btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .carrinho-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .carrinho-item > .btn-perigo {
+    grid-column: 1 / -1;
+  }
+
+  .cupom-form,
+  .cupom-aplicado {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .recibo-itens {
+    font-size: 0.86rem;
+  }
+}
