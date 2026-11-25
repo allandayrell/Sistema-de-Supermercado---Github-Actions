@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   CupomInvalidoError,
+  PagamentoInsuficienteError,
+  ProdutoNaoEncontradoError,
   ValidacaoError,
 } from '../../src/models/types.js';
 import { CaixaService } from '../../src/services/CaixaService.js';
@@ -80,6 +82,105 @@ describe('CaixaService', () => {
     expect(caixa.calcularResumo().totalFinal).toBe(20);
 
     expect(caixa.removerItem('Pão')).toBe(true);
+    expect(caixa.removerItem('Pão')).toBe(false);
     expect(caixa.calcularSubtotal()).toBe(0);
+  });
+
+  it('deve atualizar a quantidade de um item existente por nome ou SKU e recalcular o subtotal', () => {
+    const caixa = new CaixaService();
+    caixa.adicionarItem('Arroz', 25.0, 2, 'MER-001');
+
+    const atualizado = caixa.atualizarQuantidade('mer-001', 4);
+
+    expect(atualizado.quantidade).toBe(4);
+    expect(caixa.calcularSubtotal()).toBe(100);
+    expect(caixa.listarCuponsDisponiveis().map((c) => c.codigo)).toEqual([
+      'DESC10',
+      'HORIZONTE15',
+    ]);
+  });
+
+  it('deve bloquear atualização de quantidade inválida ou item ausente no carrinho', () => {
+    const caixa = new CaixaService();
+    caixa.adicionarItem('Café', 30.0, 1);
+
+    expect(() => caixa.atualizarQuantidade('Café', 0)).toThrow(ValidacaoError);
+    expect(() => caixa.atualizarQuantidade('Café', -2)).toThrow(ValidacaoError);
+    expect(() => caixa.atualizarQuantidade('Inexistente', 2)).toThrow(
+      ProdutoNaoEncontradoError,
+    );
+  });
+
+  it('deve aplicar cupom fixo HORIZONTE15 quando o subtotal for maior ou igual a R$ 100', () => {
+    const caixa = new CaixaService();
+    caixa.adicionarItem('Azeite', 50.0, 2);
+
+    caixa.aplicarCupom('horizonte15');
+    const resumo = caixa.calcularResumo();
+
+    expect(resumo.cupomAplicado).toBe('HORIZONTE15');
+    expect(resumo.descontoCupom).toBe(15);
+    expect(resumo.descontoExtra).toBe(0);
+    expect(resumo.totalFinal).toBe(85);
+  });
+
+  it('deve rejeitar cupom HORIZONTE15 quando o subtotal for menor que R$ 100', () => {
+    const caixa = new CaixaService();
+    caixa.adicionarItem('Feijão', 10.0, 9);
+
+    expect(() => caixa.aplicarCupom('HORIZONTE15')).toThrow(CupomInvalidoError);
+    expect(() => caixa.aplicarCupom('HORIZONTE15')).toThrow(/mínimo/i);
+  });
+
+  it('deve calcular o troco corretamente no pagamento em dinheiro', () => {
+    const caixa = new CaixaService();
+    caixa.adicionarItem('Leite', 5.5, 3);
+
+    const pagamento = caixa.calcularPagamento({
+      forma: 'DINHEIRO',
+      valorRecebido: 20,
+    });
+
+    expect(pagamento).toEqual({
+      formaPagamento: 'DINHEIRO',
+      totalFinal: 16.5,
+      valorPago: 20,
+      troco: 3.5,
+    });
+  });
+
+  it('deve rejeitar pagamento em dinheiro com valor insuficiente ou ausente', () => {
+    const caixa = new CaixaService();
+    caixa.adicionarItem('Pão', 15.0, 2);
+
+    expect(() =>
+      caixa.calcularPagamento({ forma: 'DINHEIRO', valorRecebido: 25 }),
+    ).toThrow(PagamentoInsuficienteError);
+    expect(() => caixa.calcularPagamento({ forma: 'DINHEIRO' })).toThrow(
+      ValidacaoError,
+    );
+  });
+
+  it('deve calcular pagamento PIX e CARTAO sem troco e impedir pagamento com carrinho vazio', () => {
+    const vazio = new CaixaService();
+    expect(() => vazio.calcularPagamento({ forma: 'PIX' })).toThrow(
+      ValidacaoError,
+    );
+
+    const caixa = new CaixaService();
+    caixa.adicionarItem('Queijo', 40.0, 2);
+
+    expect(caixa.calcularPagamento({ forma: 'PIX' })).toEqual({
+      formaPagamento: 'PIX',
+      totalFinal: 80,
+      valorPago: 80,
+      troco: 0,
+    });
+    expect(caixa.calcularPagamento({ forma: 'CARTAO' })).toEqual({
+      formaPagamento: 'CARTAO',
+      totalFinal: 80,
+      valorPago: 80,
+      troco: 0,
+    });
   });
 });

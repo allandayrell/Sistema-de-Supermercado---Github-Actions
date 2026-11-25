@@ -14,6 +14,6 @@ export type { IVendaRepository } from './repositories/IVendaRepository.js';
 export { InMemoryProdutoRepository } from './repositories/InMemoryProdutoRepository.js';
 export { InMemoryVendaRepository } from './repositories/InMemoryVendaRepository.js';
 export { JsonProdutoRepository, JsonVendaRepository } from './repositories/JsonFileStorage.js';
-export { CaixaService } from './services/CaixaService.js';
+export { CaixaService, type PagamentoCalculado } from './services/CaixaService.js';
 export { CheckoutService } from './services/CheckoutService.js';
 export { EstoqueService } from './services/EstoqueService.js';
