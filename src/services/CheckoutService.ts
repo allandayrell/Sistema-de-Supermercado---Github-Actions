@@ -4,24 +4,20 @@ import {
   ReciboVenda,
   ValidacaoError,
 } from '../models/types.js';
+import { InMemoryVendaRepository } from '../repositories/InMemoryVendaRepository.js';
+import { IVendaRepository } from '../repositories/IVendaRepository.js';
 import { CaixaService } from './CaixaService.js';
 import { EstoqueService } from './EstoqueService.js';
 
-/**
- * Orquestra o fechamento da compra integrando CaixaService e EstoqueService
- * com validação atômica para garantir rollback em caso de falta de estoque.
- */
 export class CheckoutService {
   constructor(
     private readonly estoqueService: EstoqueService,
     private readonly caixaService: CaixaService,
+    private readonly vendaRepository: IVendaRepository = new InMemoryVendaRepository(),
   ) {}
 
-  /**
-   * Consulta o preço no estoque e adiciona o item desejado ao carrinho.
-   */
-  adicionarProdutoAoCarrinho(nome: string, quantidade: number): ItemCarrinho {
-    const produto = this.estoqueService.consultarProduto(nome);
+  adicionarProdutoAoCarrinho(identificador: string, quantidade: number): ItemCarrinho {
+    const produto = this.estoqueService.consultarProduto(identificador);
     return this.caixaService.adicionarItem(
       produto.nome,
       produto.preco,
@@ -29,10 +25,6 @@ export class CheckoutService {
     );
   }
 
-  /**
-   * Valida disponibilidade de todos os itens, calcula descontos, baixa o estoque
-   * e emite o recibo da venda. Se qualquer item falhar, nenhum estoque é alterado.
-   */
   finalizarCompra(): ReciboVenda {
     const itens = this.caixaService.listarItens();
     if (itens.length === 0) {
@@ -41,27 +33,26 @@ export class CheckoutService {
       );
     }
 
-    // Fase 1: validação prévia de todos os itens garante atomicidade (rollback).
+    // Validação prévia de todos os itens antes de qualquer baixa garante rollback atômico.
     for (const item of itens) {
       this.estoqueService.verificarDisponibilidade(item.nome, item.quantidade);
     }
 
-    // Fase 2: cálculo final dos valores com descontos.
     const resumo = this.caixaService.calcularResumo();
 
-    // Fase 3: baixa efetiva no estoque após todas as validações passarem.
     for (const item of itens) {
       this.estoqueService.baixarEstoque(item.nome, item.quantidade);
     }
 
-    // Fase 4: emissão do recibo e limpeza do carrinho para a próxima venda.
     const recibo: ReciboVenda = {
       id: randomUUID(),
       data: new Date().toISOString(),
+      status: 'CONCLUIDA',
       ...resumo,
     };
 
+    const registrado = this.vendaRepository.registrar(recibo);
     this.caixaService.limparCarrinho();
-    return recibo;
+    return registrado;
   }
 }
