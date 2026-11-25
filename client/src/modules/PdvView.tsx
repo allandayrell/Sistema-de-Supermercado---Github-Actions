@@ -52,10 +52,12 @@ export function PdvView() {
   useEffect(() => {
     if (carrinho.length === 0) {
       setResumo(null);
+      setSimulando(false);
       return;
     }
 
     let cancelado = false;
+    setResumo(null);
     setSimulando(true);
     api
       .simularCaixa({ itens: carrinho, ...(cupom ? { cupom } : {}) })
@@ -68,6 +70,7 @@ export function PdvView() {
         if (cancelado) {
           return;
         }
+        setResumo(null);
         if (e instanceof ApiError && e.codigo === 'CUPOM_INVALIDO') {
           // Cupom deixou de ser válido: removemos e recalculamos sem ele.
           setCupom(null);
@@ -134,7 +137,9 @@ export function PdvView() {
   const valorRecebido = lerValorMonetario(valorRecebidoTexto);
   const trocoPrevisto =
     resumo && valorRecebido !== null ? calcularTroco(valorRecebido, resumo.totalFinal) : null;
-  const dinheiroIncompleto = formaPagamento === 'DINHEIRO' && valorRecebido === null;
+  const dinheiroIncompleto =
+    formaPagamento === 'DINHEIRO' &&
+    (valorRecebido === null || (resumo !== null && trocoPrevisto === null));
 
   const produtosPorSku = useMemo(
     () => new Map(produtos.map((produto) => [produto.sku, produto])),
