@@ -553,3 +553,119 @@ select {
 .recibo-itens td:not(:first-child) {
   text-align: right;
 }
+
+/* ---------- Estoque ---------- */
+
+.estoque {
+  display: grid;
+  gap: 16px;
+}
+
+.texto-apoio {
+  margin: -6px 0 14px;
+  color: var(--cor-texto-suave);
+  font-size: 0.88rem;
+}
+
+.secao-cabecalho .texto-apoio {
+  margin: 2px 0 0;
+}
+
+.produto-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.produto-form .btn {
+  min-height: 39px;
+}
+
+.filtros-estoque {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(180px, 0.7fr) auto;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--cor-fundo);
+}
+
+.filtro-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 39px;
+  color: var(--cor-texto-suave);
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.filtro-checkbox input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--cor-marca);
+}
+
+.tabela-responsiva {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+}
+
+.tabela-produtos {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+}
+
+.tabela-produtos th,
+.tabela-produtos td {
+  padding: 10px;
+  border-bottom: 1px solid var(--cor-borda);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.tabela-produtos th {
+  background: var(--cor-fundo);
+  color: var(--cor-texto-suave);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.tabela-produtos tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.tabela-produtos .linha-alerta {
+  background: #fffbeb;
+}
+
+.acoes-tabela {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+@media (max-width: 800px) {
+  .produto-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filtros-estoque {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .produto-form,
+  .filtros-estoque {
+    grid-template-columns: 1fr;
+  }
+}
