@@ -1,10 +1,7 @@
-name: CI - Sistema de Supermercado
+name: CI - Mercado Horizonte
 
-# Anatomia do Workflow (GitHub Docs):
-# 1. Events (on): gatilhos que iniciam a execução automática ou manual.
 on:
   push:
-    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -15,19 +12,16 @@ on:
         type: boolean
         default: true
 
-# Evita desperdício de runners cancelando execuções antigas da mesma branch/PR.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Permissões mínimas necessárias (necessário para dorny/test-reporter publicar Checks).
 permissions:
   contents: read
   actions: read
   checks: write
 
 jobs:
-  # 2. Job 1: Verificação rápida de qualidade (Linter + Tipagem) antes da matriz.
   qualidade:
     name: Qualidade (ESLint & TypeScript)
     runs-on: ubuntu-latest
@@ -51,16 +45,19 @@ jobs:
       - name: Verificar tipos TypeScript
         run: npm run typecheck
 
-  # 3. Job 2: Matrix Build rodando testes unitários e de integração em paralelo.
   testes:
-    name: Testes (Node ${{ matrix.node-version }})
+    name: Testes & Cobertura (${{ matrix.os }} / Node ${{ matrix.node-version }})
     needs: qualidade
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
-        node-version: ['20', '22']
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: ['22']
+        include:
+          - os: ubuntu-latest
+            node-version: '20'
 
     steps:
       - name: Checkout do repositório
@@ -75,14 +72,14 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
-      - name: Executar testes com cobertura e relatório JUnit
+      - name: Executar testes e validar cobertura (>= 80%)
         run: npm run test:ci
 
       - name: Publicar relatório de testes na aba Checks
         uses: dorny/test-reporter@v3
         if: ${{ !cancelled() }}
         with:
-          name: Vitest Report (Node ${{ matrix.node-version }})
+          name: Vitest Report (${{ matrix.os }} - Node ${{ matrix.node-version }})
           path: reports/junit.xml
           reporter: jest-junit
           fail-on-error: true
@@ -91,37 +88,17 @@ jobs:
         uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
-          name: coverage-node-${{ matrix.node-version }}
+          name: coverage-${{ matrix.os }}-node-${{ matrix.node-version }}
           path: coverage/
           retention-days: 7
 
       - name: Gerar resumo de cobertura no Job Summary
         if: ${{ !cancelled() }}
-        run: |
-          node -e '
-            const fs = require("node:fs");
-            const file = "coverage/coverage-summary.json";
-            const summaryPath = process.env.GITHUB_STEP_SUMMARY;
-            if (!summaryPath || !fs.existsSync(file)) process.exit(0);
-            const { total } = JSON.parse(fs.readFileSync(file, "utf8"));
-            const lines = [
-              "### Cobertura de Testes (Node ${{ matrix.node-version }})",
-              "",
-              "| Métrica | Cobertos | Total | Percentual |",
-              "| --- | ---: | ---: | ---: |",
-              `| Statements | ${total.statements.covered} | ${total.statements.total} | **${total.statements.pct}%** |`,
-              `| Branches | ${total.branches.covered} | ${total.branches.total} | **${total.branches.pct}%** |`,
-              `| Functions | ${total.functions.covered} | ${total.functions.total} | **${total.functions.pct}%** |`,
-              `| Lines | ${total.lines.covered} | ${total.lines.total} | **${total.lines.pct}%** |`,
-              ""
-            ];
-            fs.appendFileSync(summaryPath, lines.join("\n"));
-          '
+        run: node scripts/write-coverage-summary.mjs "${{ matrix.os }}" "${{ matrix.node-version }}"
 
-  # 4. Job 3: Build de produção e execução de smoke test da CLI após os testes passarem.
-  build:
-    name: Build & Demo CLI
-    needs: testes
+  e2e:
+    name: E2E (Playwright)
+    needs: qualidade
     runs-on: ubuntu-latest
 
     steps:
@@ -137,7 +114,42 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
-      - name: Compilar TypeScript (dist/)
+      - name: Compilar servidor e frontend web
+        run: npm run build
+
+      - name: Instalar Chromium para Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Executar testes E2E
+        run: npm run test:e2e
+
+      - name: Enviar relatório Playwright
+        uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  build:
+    name: Build & Demo CLI
+    needs: [testes, e2e]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v7
+
+      - name: Configurar Node.js com cache npm
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Compilar aplicação completa (dist/)
         run: npm run build
 
       - name: Executar demonstração CLI compilada
@@ -147,6 +159,6 @@ jobs:
       - name: Enviar artefato de build (dist/)
         uses: actions/upload-artifact@v7
         with:
-          name: supermercado-dist
+          name: mercado-horizonte-dist
           path: dist/
           retention-days: 7
