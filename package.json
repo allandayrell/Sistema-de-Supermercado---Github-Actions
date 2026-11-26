@@ -44,7 +44,7 @@
     "@vitejs/plugin-react": "^4.4.0",
     "@vitest/coverage-v8": "^3.0.8",
     "concurrently": "^10.0.7",
-    "eslint": "^9.22.0",
+    "eslint": "^10.15.0",
     "supertest": "^7.3.2",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2",
