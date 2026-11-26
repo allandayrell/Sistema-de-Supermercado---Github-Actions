@@ -4,7 +4,7 @@
 
 Sistema web de supermercado com **frente de caixa (PDV)**, **gestão de estoque** e **histórico de vendas com painel gerencial**. Trabalho prático da disciplina de Engenharia de Software 2.
 
-- **Sistema em produção:** _link do Render (preencher após o deploy)_
+- **Sistema em produção:** https://sistema-de-supermercado-github-acti.vercel.app/
 - **Vídeo de apresentação:** _link do YouTube (preencher após publicar)_
 
 ---
@@ -73,7 +73,7 @@ Erros seguem sempre o formato `{ "erro": "mensagem", "codigo": "CODIGO" }`.
 | Testes E2E | **Playwright** | Jornadas completas no navegador contra o servidor de produção compilado. |
 | Qualidade | **ESLint** + `tsc --noEmit` | Lint e verificação de tipos antes dos testes. |
 | CI/CD | **GitHub Actions** | Testes, cobertura e E2E em **Linux, macOS e Windows** a cada commit. |
-| Deploy | **Render** (plano gratuito) | Configurado em `render.yaml`. |
+| Deploy | **Vercel** / **Render** (plano gratuito) | Configurado em `vercel.json`, `api/index.ts` e `render.yaml`. |
 
 ### Pipeline (`.github/workflows/ci.yml`)
 
