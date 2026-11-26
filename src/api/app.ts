@@ -21,6 +21,9 @@ import { CaixaService } from '../services/CaixaService.js';
 import { CheckoutService } from '../services/CheckoutService.js';
 import { EstoqueService } from '../services/EstoqueService.js';
 import { ApiErrorResponse } from '../shared/contracts.js';
+import { criarRotasCaixa } from './routes/caixa.js';
+import { criarRotasProdutos } from './routes/produtos.js';
+import { criarRotasVendas } from './routes/vendas.js';
 
 export interface AppContainer {
   estoqueService: EstoqueService;
@@ -98,6 +101,10 @@ export function createApp(
       timestamp: new Date().toISOString(),
     });
   });
+
+  app.use('/api/produtos', criarRotasProdutos(container.estoqueService));
+  app.use('/api', criarRotasCaixa(container.checkoutService));
+  app.use('/api', criarRotasVendas(container.checkoutService));
 
   app.use('/api', (_req: Request, res: Response) => {
     res.status(404).json({
