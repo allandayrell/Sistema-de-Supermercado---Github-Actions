@@ -97,9 +97,14 @@ jobs:
         run: node scripts/write-coverage-summary.mjs "${{ matrix.os }}" "${{ matrix.node-version }}"
 
   e2e:
-    name: E2E (Playwright)
+    name: E2E (Playwright / ${{ matrix.os }})
     needs: qualidade
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
       - name: Checkout do repositório
@@ -127,7 +132,7 @@ jobs:
         uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.os }}
           path: playwright-report/
           retention-days: 7
 
