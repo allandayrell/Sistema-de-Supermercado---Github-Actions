@@ -21,6 +21,7 @@ import { CaixaService } from '../services/CaixaService.js';
 import { CheckoutService } from '../services/CheckoutService.js';
 import { EstoqueService } from '../services/EstoqueService.js';
 import { ApiErrorResponse } from '../shared/contracts.js';
+import { criarRotasProdutos } from './routes/produtos.js';
 
 export interface AppContainer {
   estoqueService: EstoqueService;
@@ -98,6 +99,8 @@ export function createApp(
       timestamp: new Date().toISOString(),
     });
   });
+
+  app.use('/api/produtos', criarRotasProdutos(container.estoqueService));
 
   app.use('/api', (_req: Request, res: Response) => {
     res.status(404).json({
