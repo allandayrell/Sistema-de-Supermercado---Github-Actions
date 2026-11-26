@@ -13,7 +13,7 @@ Sistema web de supermercado com **frente de caixa (PDV)**, **gestão de estoque*
 
 - Allan Dayrell
 - Raquel Xavier
-- Warley
+- Warley Vieira
 
 ---
 
