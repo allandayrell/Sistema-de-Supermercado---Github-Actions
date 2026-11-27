@@ -1,18 +1,19 @@
 import { Request, Response, Router } from 'express';
 import { CheckoutRequest, SimularCaixaRequest } from '../../models/types.js';
-import { CheckoutService } from '../../services/CheckoutService.js';
+import type { ExecutarNoContainer } from '../app.js';
 
-export function criarRotasCaixa(checkoutService: CheckoutService): Router {
+export function criarRotasCaixa(executar: ExecutarNoContainer): Router {
   const router = Router();
 
-  router.post('/caixa/simular', (req: Request, res: Response) => {
+  router.post('/caixa/simular', async (req: Request, res: Response) => {
     const pedido = (req.body ?? {}) as SimularCaixaRequest;
-    res.json(checkoutService.simularPedido(pedido));
+    res.json(await executar('leitura', ({ checkoutService }) => checkoutService.simularPedido(pedido)));
   });
 
-  router.post('/checkout', (req: Request, res: Response) => {
+  router.post('/checkout', async (req: Request, res: Response) => {
     const pedido = (req.body ?? {}) as CheckoutRequest;
-    res.status(201).json(checkoutService.finalizarPedido(pedido));
+    const recibo = await executar('escrita', ({ checkoutService }) => checkoutService.finalizarPedido(pedido));
+    res.status(201).json(recibo);
   });
 
   return router;

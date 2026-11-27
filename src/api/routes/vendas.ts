@@ -1,19 +1,19 @@
 import { Request, Response, Router } from 'express';
-import { CheckoutService } from '../../services/CheckoutService.js';
+import type { ExecutarNoContainer } from '../app.js';
 
-export function criarRotasVendas(checkoutService: CheckoutService): Router {
+export function criarRotasVendas(executar: ExecutarNoContainer): Router {
   const router = Router();
 
-  router.get('/vendas', (_req: Request, res: Response) => {
-    res.json(checkoutService.listarVendas());
+  router.get('/vendas', async (_req: Request, res: Response) => {
+    res.json(await executar('leitura', ({ checkoutService }) => checkoutService.listarVendas()));
   });
 
-  router.post('/vendas/:id/estorno', (req: Request<{ id: string }>, res: Response) => {
-    res.json(checkoutService.estornarVenda(req.params.id));
+  router.post('/vendas/:id/estorno', async (req: Request<{ id: string }>, res: Response) => {
+    res.json(await executar('escrita', ({ checkoutService }) => checkoutService.estornarVenda(req.params.id)));
   });
 
-  router.get('/dashboard', (_req: Request, res: Response) => {
-    res.json(checkoutService.obterDashboardResumo());
+  router.get('/dashboard', async (_req: Request, res: Response) => {
+    res.json(await executar('leitura', ({ checkoutService }) => checkoutService.obterDashboardResumo()));
   });
 
   return router;

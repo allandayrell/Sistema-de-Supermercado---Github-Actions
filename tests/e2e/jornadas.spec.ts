@@ -40,6 +40,33 @@ test.describe('Jornadas críticas do Mercado Horizonte', () => {
     await expect(saldoNoEstoque(page, produto.nome)).toHaveText('9');
   });
 
+  test('atualiza o saldo ao abrir Estoque enquanto a venda está em andamento', async ({ page, request }) => {
+    const produto = await criarProdutoViaApi(request, 'Arroz', { preco: 10, quantidade: 10 });
+    await abrirApp(page);
+    await adicionarAoCarrinho(page, produto.nome);
+
+    let liberarCompra!: () => void;
+    const compraLiberada = new Promise<void>((resolve) => {
+      liberarCompra = resolve;
+    });
+    await page.route('**/api/checkout', async (route) => {
+      await compraLiberada;
+      await route.continue();
+    });
+
+    const checkout = page.waitForRequest('**/api/checkout');
+    try {
+      await page.getByRole('button', { name: 'Finalizar venda' }).click();
+      await checkout;
+      await buscarNoEstoque(page, produto.nome);
+      await expect(page.getByText('Carregando estoque...')).toBeVisible();
+    } finally {
+      liberarCompra();
+    }
+
+    await expect(saldoNoEstoque(page, produto.nome)).toHaveText('9');
+  });
+
   test('bloqueia venda acima do estoque e preserva o saldo', async ({ page, request }) => {
     const produto = await criarProdutoViaApi(request, 'Azeite Raro', {
       preco: 40,

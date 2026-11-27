@@ -77,10 +77,17 @@ export interface HealthStatus {
   produtosCadastrados: number;
 }
 
+const comprasPendentes = new Set<Promise<ReciboVenda>>();
+
 export const api = {
   health: () => requisitar<HealthStatus>('/api/health'),
 
-  listarProdutos: () => requisitar<Produto[]>('/api/produtos'),
+  listarProdutos: async () => {
+    if (comprasPendentes.size > 0) {
+      await Promise.allSettled(comprasPendentes);
+    }
+    return requisitar<Produto[]>('/api/produtos');
+  },
 
   cadastrarProduto: (dados: CadastroProdutoInput) =>
     requisitar<Produto>('/api/produtos', enviarJson('POST', dados)),
@@ -103,8 +110,15 @@ export const api = {
   simularCaixa: (pedido: SimularCaixaRequest) =>
     requisitar<ResumoCaixa>('/api/caixa/simular', enviarJson('POST', pedido)),
 
-  finalizarCompra: (pedido: CheckoutRequest) =>
-    requisitar<ReciboVenda>('/api/checkout', enviarJson('POST', pedido)),
+  finalizarCompra: async (pedido: CheckoutRequest) => {
+    const compra = requisitar<ReciboVenda>('/api/checkout', enviarJson('POST', pedido));
+    comprasPendentes.add(compra);
+    try {
+      return await compra;
+    } finally {
+      comprasPendentes.delete(compra);
+    }
+  },
 
   listarVendas: () => requisitar<ReciboVenda[]>('/api/vendas'),
 

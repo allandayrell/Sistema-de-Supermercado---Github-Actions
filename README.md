@@ -66,7 +66,7 @@ Erros seguem sempre o formato `{ "erro": "mensagem", "codigo": "CODIGO" }`.
 | Camada | Tecnologia | Uso no projeto |
 | --- | --- | --- |
 | Linguagem | **TypeScript** | Backend e frontend tipados; os contratos da API ficam em `src/shared/contracts.ts` e são usados pelos dois lados. |
-| Backend | **Node.js + Express 5** | API REST em `src/api`, com serviços de domínio em `src/services` e repositórios em `src/repositories` (em memória ou arquivo JSON via `DATA_DIR`). |
+| Backend | **Node.js + Express 5** | API REST em `src/api`, com serviços de domínio em `src/services`. O servidor local usa memória ou arquivos JSON via `DATA_DIR`. A API na Vercel usa PostgreSQL via `DATABASE_URL`. |
 | Frontend | **React 19 + Vite** | Interface em `client/src`, servida pelo próprio Express após o build. |
 | Testes de unidade e integração | **Vitest** + **Supertest** | Regras de negócio testadas pela API pública dos serviços e rotas HTTP testadas com Supertest. |
 | Cobertura | **@vitest/coverage-v8** (Istanbul/V8) | Meta mínima de 80% em linhas, funções, branches e statements, aplicada no CI. |
@@ -138,7 +138,7 @@ npm run test:e2e
 | --- | --- | --- |
 | Unidade | `tests/unit` | 43 testes |
 | Integração (API) | `tests/integration` | 20 testes |
-| E2E (Playwright) | `tests/e2e` | 5 jornadas + 1 smoke test |
+| E2E (Playwright) | `tests/e2e` | 6 jornadas + 1 smoke test |
 
 Jornadas E2E:
 1. Compra no PDV com cupom `DESC10` via PIX e baixa no estoque.
@@ -146,6 +146,7 @@ Jornadas E2E:
 3. Cadastro de produto com estoque baixo e reposição.
 4. Pagamento em dinheiro com cálculo de troco.
 5. Estorno de venda no histórico com devolução ao estoque.
+6. Atualização do saldo ao abrir Estoque enquanto o checkout ainda está em andamento.
 
 Cada jornada cria seus próprios produtos com SKU único, então os testes não dependem de dados deixados por outro.
 
@@ -157,3 +158,9 @@ npm run dev      # API em http://localhost:3000 e frontend em http://localhost:5
 npm run build
 npm start        # http://localhost:3000
 ```
+
+### Estoque e vendas na Vercel
+
+Conecte um banco PostgreSQL ao projeto e configure a variável `DATABASE_URL` no ambiente **Production** antes de publicar. A API cria sua tabela e carrega o catálogo inicial no primeiro acesso a um banco vazio. O usuário do banco precisa ter permissão para criar a tabela. A venda e a baixa no estoque são gravadas na mesma transação.
+
+O teste de integração com duas instâncias usa `TEST_DATABASE_URL`. Ele cria e remove um esquema próprio em um banco de testes. Execute-o com `npm run test:integration` depois de definir a variável.

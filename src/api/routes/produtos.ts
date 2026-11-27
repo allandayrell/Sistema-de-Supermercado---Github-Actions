@@ -6,7 +6,7 @@ import {
   FiltroProdutos,
   ValidacaoError,
 } from '../../models/types.js';
-import { EstoqueService } from '../../services/EstoqueService.js';
+import type { ExecutarNoContainer } from '../app.js';
 
 function lerCorpo(req: Request): Record<string, unknown> {
   return typeof req.body === 'object' && req.body !== null ? req.body : {};
@@ -54,40 +54,46 @@ function lerCadastro(corpo: Record<string, unknown>): CadastroProdutoInput {
   };
 }
 
-export function criarRotasProdutos(estoqueService: EstoqueService): Router {
+export function criarRotasProdutos(executar: ExecutarNoContainer): Router {
   const router = Router();
 
-  router.get('/', (req: Request, res: Response) => {
+  router.get('/', async (req: Request, res: Response) => {
     const filtro: FiltroProdutos = {
       busca: typeof req.query.busca === 'string' ? req.query.busca : undefined,
       categoria: lerCategoria(req.query.categoria),
       apenasEstoqueBaixo: req.query.estoqueBaixo === 'true',
     };
-    res.json(estoqueService.listarProdutos(filtro));
+    res.json(await executar('leitura', ({ estoqueService }) => estoqueService.listarProdutos(filtro)));
   });
 
-  router.post('/', (req: Request, res: Response) => {
+  router.post('/', async (req: Request, res: Response) => {
     const dados = lerCadastro(lerCorpo(req));
-    const produto = estoqueService.cadastrarProduto(dados.nome, dados.preco, dados.quantidade, {
-      sku: dados.sku,
-      categoria: dados.categoria,
-      estoqueMinimo: dados.estoqueMinimo,
-    });
+    const produto = await executar('escrita', ({ estoqueService }) =>
+      estoqueService.cadastrarProduto(dados.nome, dados.preco, dados.quantidade, {
+        sku: dados.sku,
+        categoria: dados.categoria,
+        estoqueMinimo: dados.estoqueMinimo,
+      }),
+    );
     res.status(201).json(produto);
   });
 
-  router.patch('/:sku', (req: Request<{ sku: string }>, res: Response) => {
+  router.patch('/:sku', async (req: Request<{ sku: string }>, res: Response) => {
     const preco = exigirNumero(lerCorpo(req).preco, 'preco');
-    res.json(estoqueService.atualizarPreco(req.params.sku, preco));
+    res.json(await executar('escrita', ({ estoqueService }) =>
+      estoqueService.atualizarPreco(req.params.sku, preco),
+    ));
   });
 
-  router.post('/:sku/repor', (req: Request<{ sku: string }>, res: Response) => {
+  router.post('/:sku/repor', async (req: Request<{ sku: string }>, res: Response) => {
     const quantidade = exigirNumero(lerCorpo(req).quantidade, 'quantidade');
-    res.json(estoqueService.reporEstoque(req.params.sku, quantidade));
+    res.json(await executar('escrita', ({ estoqueService }) =>
+      estoqueService.reporEstoque(req.params.sku, quantidade),
+    ));
   });
 
-  router.delete('/:sku', (req: Request<{ sku: string }>, res: Response) => {
-    estoqueService.removerProduto(req.params.sku);
+  router.delete('/:sku', async (req: Request<{ sku: string }>, res: Response) => {
+    await executar('escrita', ({ estoqueService }) => estoqueService.removerProduto(req.params.sku));
     res.status(204).end();
   });
 

@@ -13,6 +13,8 @@ import {
 } from '../models/types.js';
 import { InMemoryProdutoRepository } from '../repositories/InMemoryProdutoRepository.js';
 import { InMemoryVendaRepository } from '../repositories/InMemoryVendaRepository.js';
+import type { IProdutoRepository } from '../repositories/IProdutoRepository.js';
+import type { IVendaRepository } from '../repositories/IVendaRepository.js';
 import {
   JsonProdutoRepository,
   JsonVendaRepository,
@@ -31,6 +33,11 @@ export interface AppContainer {
   checkoutService: CheckoutService;
 }
 
+export type ExecutarNoContainer = <T>(
+  tipo: 'leitura' | 'escrita',
+  operacao: (container: AppContainer) => T,
+) => Promise<T>;
+
 export function createDefaultContainer(dataDir = process.env.DATA_DIR): AppContainer {
   const produtoRepo = dataDir
     ? new JsonProdutoRepository(join(dataDir, 'produtos.json'))
@@ -39,9 +46,16 @@ export function createDefaultContainer(dataDir = process.env.DATA_DIR): AppConta
     ? new JsonVendaRepository(join(dataDir, 'vendas.json'))
     : new InMemoryVendaRepository();
 
-  const estoqueService = new EstoqueService(produtoRepo);
-  popularCatalogoInicial(estoqueService);
+  const container = criarContainer(produtoRepo, vendaRepo);
+  popularCatalogoInicial(container.estoqueService);
+  return container;
+}
 
+export function criarContainer(
+  produtoRepo: IProdutoRepository,
+  vendaRepo: IVendaRepository,
+): AppContainer {
+  const estoqueService = new EstoqueService(produtoRepo);
   const caixaService = new CaixaService();
   const checkoutService = new CheckoutService(estoqueService, caixaService, vendaRepo);
 
@@ -85,26 +99,38 @@ export interface CreateAppOptions {
 }
 
 export function createApp(
-  container: AppContainer = createDefaultContainer(),
+  containerOuExecutor: AppContainer | ExecutarNoContainer = createDefaultContainer(),
   options: CreateAppOptions = {},
 ): express.Express {
   const app = express();
+  const executar: ExecutarNoContainer = typeof containerOuExecutor === 'function'
+    ? containerOuExecutor
+    : async (_tipo, operacao) => operacao(containerOuExecutor);
+  if (typeof containerOuExecutor !== 'function') {
+    app.locals.container = containerOuExecutor;
+  }
+
+  app.use('/api', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+  });
   app.use(express.json());
 
-  app.locals.container = container;
-
-  app.get('/api/health', (_req: Request, res: Response) => {
+  app.get('/api/health', async (_req: Request, res: Response) => {
+    const produtosCadastrados = await executar('leitura', ({ estoqueService }) =>
+      estoqueService.listarProdutos().length,
+    );
     res.json({
       status: 'ok',
       service: 'Mercado Horizonte',
-      produtosCadastrados: container.estoqueService.listarProdutos().length,
+      produtosCadastrados,
       timestamp: new Date().toISOString(),
     });
   });
 
-  app.use('/api/produtos', criarRotasProdutos(container.estoqueService));
-  app.use('/api', criarRotasCaixa(container.checkoutService));
-  app.use('/api', criarRotasVendas(container.checkoutService));
+  app.use('/api/produtos', criarRotasProdutos(executar));
+  app.use('/api', criarRotasCaixa(executar));
+  app.use('/api', criarRotasVendas(executar));
 
   app.use('/api', (_req: Request, res: Response) => {
     res.status(404).json({
